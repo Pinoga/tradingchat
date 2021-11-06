@@ -1,5 +1,6 @@
-package broadcast
+package handlers
 
+// Channel containing messages from
 type Client struct {
 	IncomingMessages chan []byte
 }
