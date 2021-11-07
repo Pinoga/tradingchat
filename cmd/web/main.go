@@ -1,17 +1,20 @@
 package main
 
 import (
-	"net/http"
-	"tradingchat/chat/broadcast"
-	"tradingchat/chat/connection"
+	"log"
+	"tradingchat/pkg/app"
 )
 
 func main() {
-	address := ":8080"
-	group := broadcast.NewBroadCastGroup()
-	go group.HandleBroadcasts()
-	http.HandleFunc("/chat", func(rw http.ResponseWriter, r *http.Request) {
-		connection.HandleConnection(rw, r, group)
-	})
-	http.ListenAndServe(&address, nil)
+	config := app.AppConfig{
+		LenBgs:          1,
+		CookieSecretKey: "abcdef",
+		Port:            ":8080",
+	}
+	application := app.NewApp()
+	application.Initialize(config)
+	err := application.Run()
+	if err != nil {
+		log.Fatalf(err.Error())
+	}
 }
