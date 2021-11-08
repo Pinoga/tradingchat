@@ -21,9 +21,9 @@
         <div>3</div> 
       </div>
       <div class="message-form-container">
-        <form id="send-message" onsubmit="sendMessage(this)">
-          <input type="text">
-          <input type="submit" value="Send Message">
+        <form id="send-message" onsubmit="return false">
+          <input type="text" name="message" id="message">
+          <input type="button" value="Send Message" onclick="sendMessage()">
         </form>
       </div>
     </div>

@@ -37,7 +37,13 @@ function enterRoom(r) {
   const messages = document.getElementById("messages");
 
   socket = new WebSocket(
-    "ws://localhost:8080/api/chat/enter/" + (parseInt(r) - 1)
+    "ws://localhost:8080/api/chat/enter/" + (parseInt(r) - 1),
+    [],
+    {
+      Headers: {
+        Cookie: document.cookie,
+      },
+    }
   );
   socket.onopen = () => {
     console.log("opened");
@@ -64,6 +70,8 @@ function leaveRoom() {
   return socket.close();
 }
 
-function sendMessage(e) {}
+function sendMessage() {
+  const message = document.getElementById("message").value;
+}
 
 auth().catch((err) => (window.location.href = "unauth.html"));
