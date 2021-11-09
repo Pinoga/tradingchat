@@ -21,6 +21,7 @@ cd $root/cmd/bot && go run .
   - Unit tests
   - Show only first 50 messages in the chat
 - Bugs:
+  - Haven't figured out why yet, but apparently only the last chatroom works as expected
   - Chatrooms behavior sometimes don't work as expected, the connection closes everytime a client enters a room
   - Bot message error handling stopped working in the final ajustments
   - And probably many others lol...
