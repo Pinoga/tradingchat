@@ -6,7 +6,7 @@ import (
 
 type UserService interface {
 	FindByID(string) (*User, error)
-	Register(username, password string) (*User, error)
+	Register(username, password string) (string, error)
 	FindByName(string) (*User, error)
 }
 
@@ -29,6 +29,7 @@ func NewUserService(store store.Store) UserService {
 
 func (us *userService) FindByID(id string) (*User, error) {
 	var user User
+
 	found, err := us.Store.FindOne("user", map[string]interface{}{"_id": id}, &user)
 	if !found {
 		return nil, err
@@ -36,10 +37,10 @@ func (us *userService) FindByID(id string) (*User, error) {
 	return &user, err
 }
 
-func (us *userService) Register(username, password string) (*User, error) {
+func (us *userService) Register(username, password string) (string, error) {
 	hash, err := HashSaltPassword([]byte(password))
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	user := User{
@@ -48,13 +49,11 @@ func (us *userService) Register(username, password string) (*User, error) {
 		Hash:     hash,
 	}
 
-	var insertedUser User
-
-	inserted, err := us.Store.InsertOne("user", &user, &insertedUser)
-	if !inserted {
-		return nil, err
+	id, err := us.Store.InsertOne("user", &user)
+	if err != nil {
+		return "", err
 	}
-	return &insertedUser, err
+	return id, err
 }
 
 func (us *userService) FindByName(username string) (*User, error) {

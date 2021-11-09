@@ -1,19 +1,14 @@
-let user;
-let room;
-let socket;
+let user = null;
+let room = null;
+let socket = null;
 
 function onClickRoom(e) {
-  if (room === undefined) {
-    room = e.target.id;
-    enterRoom(room);
-  } else if (room !== e.target.id) {
-    leaveRoom(room).then(() => enterRoom(e.target.id));
-  }
+  enterRoom(e.target.id);
 }
 
 async function auth() {
   try {
-    res = await fetch("/api/chat/authenticate", {
+    res = await fetch("/api/authenticate", {
       body: JSON.stringify({}),
       method: "post",
       credentials: "same-origin",
@@ -26,7 +21,7 @@ async function auth() {
       throw Error("user not authenticated");
     }
     const data = await res.json();
-    user = data.body;
+    user = data.data;
     return user;
   } catch (error) {
     throw Error("An error occurred");
@@ -34,6 +29,11 @@ async function auth() {
 }
 
 function enterRoom(r) {
+  if (room && room !== r) {
+    leaveRoom(room);
+  }
+  room = r;
+
   const messages = document.getElementById("messages");
 
   socket = new WebSocket(
@@ -45,8 +45,12 @@ function enterRoom(r) {
       },
     }
   );
+
+  console.log(room);
   socket.onopen = () => {
     console.log("opened");
+    document.getElementById("chatroom").removeAttribute("hidden");
+    document.getElementById("chatroom-title").innerText = "Chat room #" + room;
     messages.replaceChildren();
   };
   socket.onclose = () => {
@@ -57,21 +61,30 @@ function enterRoom(r) {
     console.log("error");
   };
   socket.onmessage = (message) => {
-    const content = JSON.parse(message);
-    console.log("message:", content);
+    console.log(message);
+    const data = JSON.parse(message.data);
+    console.log("message:", data);
     const msgTag = document.createElement("div");
-    msgTag.textContent = content;
+    msgTag.style = {
+      width: "100%",
+    };
+    msgTag.textContent = `${data.user}: ${data.content} (${data.timestamp})`;
     messages.appendChild(msgTag);
   };
 }
 
 function leaveRoom() {
   if (!socket) return;
-  return socket.close();
+  socket.close();
+  document.getElementById("chatroom").setAttribute("hidden", true);
+  room = null;
 }
 
 function sendMessage() {
+  if (!socket.OPEN) return;
+  console.log("sendMessage");
   const message = document.getElementById("message").value;
+  return socket.send(message);
 }
 
-auth().catch((err) => (window.location.href = "unauth.html"));
+auth().catch(() => (window.location.href = "unauth.html"));

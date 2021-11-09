@@ -22,6 +22,12 @@ github.com/klauspost/compress/zstd
 github.com/klauspost/compress/zstd/internal/xxhash
 # github.com/pkg/errors v0.9.1
 github.com/pkg/errors
+# github.com/rs/xid v1.3.0
+## explicit
+github.com/rs/xid
+# github.com/streadway/amqp v1.0.0
+## explicit
+github.com/streadway/amqp
 # github.com/xdg-go/pbkdf2 v1.0.0
 github.com/xdg-go/pbkdf2
 # github.com/xdg-go/scram v1.0.2

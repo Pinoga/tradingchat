@@ -1,14 +1,16 @@
 package app
 
 import (
-	"log"
+	"fmt"
 	"net/http"
 	"tradingchat/pkg/chat"
 	"tradingchat/pkg/mongodb"
 	"tradingchat/pkg/service"
+	"tradingchat/pkg/store"
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
+	"github.com/streadway/amqp"
 )
 
 type AppConfig struct {
@@ -17,14 +19,18 @@ type AppConfig struct {
 	Port            string
 	DatabaseURI     string
 	DatabaseName    string
+	RabbitMQURI     string
 }
 
 type App struct {
-	Router       *mux.Router
-	Port         string
-	Bgs          []chat.BroadcastGroup
-	SessionStore *sessions.CookieStore
-	UserService  service.UserService
+	Router             *mux.Router
+	Port               string
+	Bgs                []chat.BroadcastGroup
+	SessionStore       *sessions.CookieStore
+	UserService        service.UserService
+	Store              store.Store
+	RabbitMQConnection *amqp.Connection
+	AppConfig
 }
 
 func NewApp() *App {
@@ -32,8 +38,13 @@ func NewApp() *App {
 }
 
 func (app *App) Initialize(c AppConfig) *App {
-	app.Port = c.Port
-	app.Bgs = make([]chat.BroadcastGroup, c.LenBgs)
+	app.AppConfig = c
+	app.Bgs = make([]chat.BroadcastGroup, 0)
+
+	for i := 0; i < c.LenBgs; i++ {
+		app.Bgs = append(app.Bgs, *chat.NewBroadCastGroup())
+	}
+
 	key := []byte(c.CookieSecretKey)
 	app.SessionStore = sessions.NewCookieStore(key)
 	app.SessionStore.Options = &sessions.Options{
@@ -43,13 +54,6 @@ func (app *App) Initialize(c AppConfig) *App {
 		SameSite: http.SameSiteLaxMode,
 	}
 
-	store := mongodb.NewStore(mongodb.MongoOptions{
-		DB:  c.DatabaseName,
-		URI: c.DatabaseURI,
-	})
-
-	app.UserService = service.NewUserService(store)
-
 	app.Router = mux.NewRouter()
 
 	apiRouter := app.Router.PathPrefix("/api").Subrouter()
@@ -57,11 +61,11 @@ func (app *App) Initialize(c AppConfig) *App {
 
 	apiRouter.HandleFunc("/login", app.handleLogin).Methods("POST")
 	apiRouter.HandleFunc("/register", app.handleRegister).Methods("POST")
+	apiRouter.HandleFunc("/authenticate", app.handleAuthentication).Methods("POST")
 
 	chatRouter := apiRouter.PathPrefix("/chat").Subrouter()
 	chatRouter.Use(app.authenticationMiddleware)
 
-	chatRouter.HandleFunc("/authenticate", app.handleAuthentication).Methods("POST")
 	chatRouter.HandleFunc("/enter/{room}", app.handleEnterRoom).Methods("GET")
 	// chatRouter.HandleFunc("/leave", app.handleLeaveRoom).Methods("POST")
 
@@ -70,11 +74,48 @@ func (app *App) Initialize(c AppConfig) *App {
 }
 
 func (app *App) Run() error {
+	store, err := mongodb.NewStore(mongodb.MongoOptions{
+		DB:  app.DatabaseName,
+		URI: app.DatabaseURI,
+	})
+	if err != nil {
+		return err
+	}
+	fmt.Println("Connected to MongoDB successfully")
+
+	app.Store = store
+	app.UserService = service.NewUserService(store)
+
+	rabbitMQConnection, err := amqp.Dial(app.RabbitMQURI)
+	if err != nil {
+		return err
+	}
+	fmt.Println("Connected to RabbitMQ successfully")
+
+	app.RabbitMQConnection = rabbitMQConnection
+	ch, err := rabbitMQConnection.Channel()
+	if err != nil {
+		return err
+	}
+	defer ch.Close()
+
+	msgs, err := app.ConsumeQueueMessages(ch)
+	if err != nil {
+		return err
+	}
+	go app.HandleConsumedMessages(msgs)
+
 	for _, bg := range app.Bgs {
 		go bg.HandleBroadcasts()
 	}
+
 	http.Handle("/", app.Router)
-	log.Printf("Listening on %s", app.Port)
-	err := http.ListenAndServe(app.Port, nil)
+	fmt.Printf("Listening on %s\n", app.AppConfig.Port)
+
+	err = http.ListenAndServe(":"+app.AppConfig.Port, nil)
 	return err
+}
+
+func (app *App) Stop() {
+	app.Store.Disconnect()
 }

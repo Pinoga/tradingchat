@@ -17,6 +17,7 @@ func (app *App) handleLogin(w http.ResponseWriter, r *http.Request) {
 
 	if user == "" || password == "" {
 		http.Error(w, "user or password can't be empty", http.StatusBadRequest)
+		return
 	}
 
 	// if user != u || password != p {
@@ -25,14 +26,20 @@ func (app *App) handleLogin(w http.ResponseWriter, r *http.Request) {
 
 	foundUser, err := app.UserService.FindByName(user)
 	if err != nil {
+		http.Error(w, "error finding user", http.StatusInternalServerError)
+		return
+	}
+	if foundUser == nil {
 		http.Error(w, "user or password invalid", http.StatusUnauthorized)
+		return
 	}
 
-	if passwordsMatch := service.ComparePasswords(foundUser.Hash, password); !passwordsMatch {
+	if passwordsMatch := service.ComparePasswords(foundUser.Hash, []byte(password)); !passwordsMatch {
 		http.Error(w, "invalid password", http.StatusUnauthorized)
+		return
 	}
 
-	session.Values["user"] = foundUser
+	session.Values["user"] = foundUser.ID
 	saveSession(w, r, session)
 	SendJSONResponse(w, "login successful", http.StatusOK, nil)
 }
@@ -46,16 +53,22 @@ func (app *App) handleRegister(w http.ResponseWriter, r *http.Request) {
 
 	if user == "" || password == "" {
 		http.Error(w, "user or password can't be empty", http.StatusBadRequest)
+		return
 	}
 
-	foundUser, err := app.UserService.FindByName(user)
-	if err == nil {
-		http.Error(w, "user already registered", http.StatusBadRequest)
+	found, _ := app.UserService.FindByName(user)
+	if found != nil {
+		http.Error(w, "user already registered", http.StatusOK)
+		return
 	}
 
-	created, err := app.UserService.Register(user, password)
+	uID, err := app.UserService.Register(user, password)
+	if err != nil {
+		http.Error(w, "error creating user", http.StatusInternalServerError)
+		return
+	}
 
-	session.Values["user"] = created
+	session.Values["user"] = uID
 	saveSession(w, r, session)
 	SendJSONResponse(w, "registration successful", http.StatusCreated, nil)
 }
@@ -65,12 +78,9 @@ func (app *App) handleAuthentication(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		fmt.Printf("couldn't decode session. Err: %v", err)
 		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
 	}
 
-	// user, ok := session.Values["user"]V
-	// if !ok {
-	// 	http.Error(w, "not authenticated", http.StatusUnauthorized)
-	// }
 	// userIDString, ok := userID.(string)
 	// if !ok {
 	// 	http.Error(w, "not authenticated", http.StatusUnauthorized)
@@ -78,14 +88,22 @@ func (app *App) handleAuthentication(w http.ResponseWriter, r *http.Request) {
 
 	if auth := app.isAuth(session); !auth {
 		http.Error(w, "not authenticated", http.StatusUnauthorized)
+		return
 	}
 
-	// user, err := app.UserRepo.Find(userIDString)
-	// if err != nil {
-	// 	http.Error(w, "not authenticated", http.StatusUnauthorized)
-	// }
+	uID, ok := session.Values["user"].(string)
+	if !ok {
+		http.Error(w, "user not found", http.StatusInternalServerError)
+		return
+	}
 
-	SendJSONResponse(w, user, http.StatusOK, user)
+	user, err := app.UserService.FindByID(uID)
+	if err != nil {
+		http.Error(w, "couldn't find user", http.StatusInternalServerError)
+		return
+	}
+
+	SendJSONResponse(w, "authenticated", http.StatusOK, *user)
 }
 
 func saveSession(w http.ResponseWriter, r *http.Request, session *sessions.Session) {
@@ -98,4 +116,17 @@ func (app *App) isAuth(session *sessions.Session) bool {
 		return false
 	}
 	return true
+}
+
+func (app *App) GetUserFromSession(session *sessions.Session) (*service.User, error) {
+	uID, ok := session.Values["user"].(string)
+	if !ok {
+		return nil, fmt.Errorf("user not found in session")
+	}
+
+	user, err := app.UserService.FindByID(uID)
+	if err != nil {
+		return nil, fmt.Errorf("user not found in database")
+	}
+	return user, nil
 }

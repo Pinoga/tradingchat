@@ -27,5 +27,4 @@ func SendJSONResponse(w http.ResponseWriter, message string, status int, data in
 
 	w.WriteHeader(status)
 	w.Write(jsonResp)
-	fmt.Println(string(jsonResp))
 }

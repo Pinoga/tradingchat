@@ -13,18 +13,18 @@
       <div style="display: flex; flex-direction: row">
         <button type="button" room-pick" id="1" onclick="onClickRoom(event)">Room #1</button>
         <button type="button" class="room-pick" id="2" onclick="onClickRoom(event)">Room #2</button>
+        <button type="button" class="room-pick" id="3" onclick="onClickRoom(event)">Room #3</button>
       </div>
-      <h1>Chat room #</h1>
-      <div id="messages" class="messages-container" style="height: 400px; overflow-y: scroll; vertical-align: bottom; display: table-cell;">
-        <div>1</div> 
-        <div>2</div> 
-        <div>3</div> 
-      </div>
-      <div class="message-form-container">
-        <form id="send-message" onsubmit="return false">
-          <input type="text" name="message" id="message">
-          <input type="button" value="Send Message" onclick="sendMessage()">
-        </form>
+      <div id="chatroom" hidden>
+        <h1 id="chatroom-title"></h1>
+        <div id="messages" class="messages-container" style="height: 400px; overflow-y: scroll; vertical-align: bottom; display: table-cell;">
+        </div>
+        <div class="message-form-container">
+          <form id="send-message" onsubmit="return false">
+            <input type="text" name="message" id="message">
+            <input type="button" value="Send Message" onclick="sendMessage()">
+          </form>
+        </div>
       </div>
     </div>
   </body>

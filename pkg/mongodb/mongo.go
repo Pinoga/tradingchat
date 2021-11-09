@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -16,14 +17,19 @@ type MongoOptions struct {
 }
 
 type MongoStore struct {
-	DB *mongo.Database
+	Client   *mongo.Client
+	Database string
 }
 
-func NewStore(op MongoOptions) *MongoStore {
-	db := getMongoClient(op)
-	return &MongoStore{
-		DB: db,
+func NewStore(op MongoOptions) (*MongoStore, error) {
+	client, err := getClient(op)
+	if err != nil {
+		return nil, err
 	}
+	return &MongoStore{
+		Client:   client,
+		Database: op.DB,
+	}, nil
 }
 
 func ToBson(v map[string]interface{}) (doc *bson.M, err error) {
@@ -35,40 +41,69 @@ func ToBson(v map[string]interface{}) (doc *bson.M, err error) {
 	return
 }
 
-func getMongoClient(op MongoOptions) *mongo.Database {
+func getClient(op MongoOptions) (*mongo.Client, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
+	fmt.Println(op)
 
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(op.URI))
+	if err != nil {
+		return nil, err
+	}
 
+	return client, nil
+}
+
+func (s *MongoStore) defaultDB() *mongo.Database {
+	return s.Client.Database(s.Database)
+}
+
+func (s *MongoStore) Disconnect() {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 	defer func() {
-		if err = client.Disconnect(ctx); err != nil {
+		if err := s.Client.Disconnect(ctx); err != nil {
 			panic(err)
 		}
 	}()
-
-	return client.Database(op.DB)
 }
 
-func (s *MongoStore) InsertOne(collection string, entity interface{}) (interface{}, error) {
+func (s *MongoStore) InsertOne(collection string, entity interface{}) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	c := s.DB.Collection(collection)
+	c := s.defaultDB().Collection(collection)
 
 	r, err := c.InsertOne(ctx, entity)
 	if err != nil {
-		return nil, fmt.Errorf("error inserting document into %v: %s", collection, err)
+		return "", fmt.Errorf("error inserting document into %v: %s", collection, err)
 	}
 
-	fmt.Println(r.InsertedID)
-	return r.InsertedID, nil
+	if oid, ok := r.InsertedID.(primitive.ObjectID); ok {
+		return oid.Hex(), nil
+	} else {
+		return "", fmt.Errorf("error getting id string from %v", r.InsertedID)
+	}
 }
 
 func (s *MongoStore) FindOne(collection string, filter map[string]interface{}, dest interface{}) (bool, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	c := s.DB.Collection(collection)
+	c := s.defaultDB().Collection(collection)
+
+	id, ok := filter["_id"]
+	if ok {
+		idString, ok := id.(string)
+		err := fmt.Errorf("invalid _id paramenter value: %v", idString)
+		if !ok {
+			return false, err
+		}
+		objID, err := primitive.ObjectIDFromHex(idString)
+		if err != nil {
+			return false, err
+		}
+		filter["_id"] = objID
+	}
 
 	f, err := ToBson(filter)
 	if err != nil {
@@ -78,8 +113,9 @@ func (s *MongoStore) FindOne(collection string, filter map[string]interface{}, d
 
 	err = c.FindOne(ctx, *f).Decode(dest)
 	if err != nil && err == mongo.ErrNoDocuments {
-		return false, nil
+		return false, err
 	} else if err != nil {
+		fmt.Printf("FindOne error: %v", err)
 		return false, err
 	}
 	return true, nil

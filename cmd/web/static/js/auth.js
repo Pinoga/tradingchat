@@ -13,11 +13,12 @@ function submitForm(form, url, handler) {
 }
 
 function handleAuth(form, res) {
+  console.log(res.url);
   let resMessageEl = document.getElementById(`${form.id}-error`);
-  if (!res.ok) {
+  if (!res.ok || (form.id === "register" && res.status === 200)) {
     resMessageEl.innerText =
       form.id === "login" ? "Invalid credentials!" : "Try another username!";
-  } else if (res.status === 200) {
+  } else if (res.status === 200 || res.status === 201) {
     window.location.href = "/pages/chatroom.html";
   }
 }
