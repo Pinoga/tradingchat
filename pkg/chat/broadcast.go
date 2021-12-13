@@ -1,6 +1,7 @@
 package chat
 
 import (
+	"fmt"
 	"tradingchat/pkg/service"
 )
 
@@ -38,6 +39,7 @@ func (bg *BroadcastGroup) Get(m []byte) {
 
 func (bg *BroadcastGroup) Enter(c *Client) {
 	bg.entering <- c
+	fmt.Println("entered?")
 }
 
 func (bg *BroadcastGroup) Leave(c *Client) {

@@ -34,5 +34,5 @@ func (app *App) handleEnterRoom(w http.ResponseWriter, r *http.Request) {
 
 	user := r.Context().Value(UserContextKey("user")).(service.User)
 
-	chat.HandleConnection(conn, &app.Bgs[room], &user)
+	chat.HandleConnection(conn, app.Bgs[room], &user)
 }

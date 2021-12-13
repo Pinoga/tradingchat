@@ -24,8 +24,7 @@ type AppConfig struct {
 
 type App struct {
 	Router             *mux.Router
-	Port               string
-	Bgs                []chat.BroadcastGroup
+	Bgs                []*chat.BroadcastGroup
 	SessionStore       *sessions.CookieStore
 	UserService        service.UserService
 	Store              store.Store
@@ -39,10 +38,10 @@ func NewApp() *App {
 
 func (app *App) Initialize(c AppConfig) *App {
 	app.AppConfig = c
-	app.Bgs = make([]chat.BroadcastGroup, 0)
+	app.Bgs = make([]*chat.BroadcastGroup, c.LenBgs)
 
 	for i := 0; i < c.LenBgs; i++ {
-		app.Bgs = append(app.Bgs, *chat.NewBroadCastGroup())
+		app.Bgs[i] = chat.NewBroadCastGroup()
 	}
 
 	key := []byte(c.CookieSecretKey)
@@ -67,7 +66,6 @@ func (app *App) Initialize(c AppConfig) *App {
 	chatRouter.Use(app.authenticationMiddleware)
 
 	chatRouter.HandleFunc("/enter/{room}", app.handleEnterRoom).Methods("GET")
-	// chatRouter.HandleFunc("/leave", app.handleLeaveRoom).Methods("POST")
 
 	app.Router.PathPrefix("/").Handler(http.FileServer(http.Dir("./static")))
 	return app

@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"strings"
 	"time"
-	"tradingchat/internal/model"
 	"tradingchat/pkg/service"
 
 	"github.com/gorilla/websocket"
@@ -27,6 +26,7 @@ func HandleConnection(conn *websocket.Conn, bg *BroadcastGroup, user *service.Us
 	}
 
 	bg.Enter(&client)
+	fmt.Println(bg.ID, bg.clients)
 
 	go handleClientMessage(conn, bg, &client)
 	go handleBroadcastMessage(conn, &client)
@@ -54,7 +54,7 @@ func handleClientMessage(conn *websocket.Conn, bg *BroadcastGroup, client *Clien
 		if strings.HasPrefix(content, "/stock=") {
 			err := SendCommandToBot(strings.TrimPrefix(content, "/stock="), bg.ID)
 			if err != nil {
-				respMsg := model.Message{
+				respMsg := Message{
 					User:      "system",
 					Role:      "system",
 					Content:   err.Error(),
@@ -70,7 +70,7 @@ func handleClientMessage(conn *websocket.Conn, bg *BroadcastGroup, client *Clien
 
 		}
 
-		msg := model.Message{
+		msg := Message{
 			User:      client.User.Username,
 			Role:      client.User.Role,
 			Content:   content,

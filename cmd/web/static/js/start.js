@@ -29,9 +29,9 @@ async function auth() {
 }
 
 function enterRoom(r) {
-  if (room && room !== r) {
-    leaveRoom(room);
-  }
+  if (room === r) return;
+  if (room) leaveRoom(room);
+
   room = r;
 
   const messages = document.getElementById("messages");

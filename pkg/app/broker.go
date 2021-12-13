@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strconv"
 	"time"
-	"tradingchat/internal/model"
+	"tradingchat/pkg/chat"
 
 	"github.com/streadway/amqp"
 )
@@ -31,7 +31,7 @@ func (app *App) HandleConsumedMessages(msgs <-chan amqp.Delivery) {
 			continue
 		}
 
-		msgChat := model.Message{
+		msgChat := chat.Message{
 			User:      "bot",
 			Role:      "bot",
 			Content:   msgStruct.Message,
