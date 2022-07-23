@@ -25,7 +25,7 @@ const (
 
 const (
 	InternalError = "unexpected error"
-	BadRequest    = "stock_code is missing"
+	BadRequest    = "stock_code is invalid"
 	Unavailable   = "service currently unavailable"
 )
 
@@ -34,15 +34,13 @@ func ProcessStockData() {
 		fmt.Println("req")
 
 		var queueResponseError error
-		var message string
 
-		fmt.Println()
 		resp, queueResponseError := requestStockData(fmt.Sprintf("https://stooq.com/q/l/?s=%s&f=sd2t2ohlcv&h&e=csv", data.StockCode))
 		if queueResponseError == nil {
-			message, queueResponseError = parseStockResponse(resp)
+			message, hasErr := parseStockResponse(resp)
 			response := StockResponse{
 				Message:  message,
-				Error:    queueResponseError != nil,
+				Error:    hasErr,
 				CallerID: data.CallerID,
 			}
 			bytes, err := json.Marshal(response)
@@ -62,15 +60,18 @@ func requestStockData(url string) (*http.Response, error) {
 	return resp, nil
 }
 
-func parseStockResponse(resp *http.Response) (string, error) {
+func parseStockResponse(resp *http.Response) (string, bool) {
 	reader := csv.NewReader(resp.Body)
 	reader.Comma = ','
 	data, err := reader.ReadAll()
 
 	fmt.Println(data)
 	if err != nil || len(data) != 2 {
-		return "", fmt.Errorf(Unavailable)
+		return Unavailable, true
+	}
+	if data[Values][Date] == "N/D" {
+		return BadRequest, true
 	}
 
-	return fmt.Sprintf("%s quote is $%s per share", data[Values][Symbol], data[Values][Close]), nil
+	return fmt.Sprintf("%s quote is $%s per share", data[Values][Symbol], data[Values][Close]), false
 }

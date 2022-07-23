@@ -68,24 +68,28 @@ func (s *MongoStore) Disconnect() {
 	}()
 }
 
-func (s *MongoStore) InsertOne(collection string, entity interface{}) (string, error) {
+func (s *MongoStore) InsertOne(collection string, entity MongoEntity) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	c := s.defaultDB().Collection(collection)
+
+	existingID := entity.GetID()
+
+	if len(existingID) > 0 {
+		return "", fmt.Errorf("cannot insert entity with existing ID %v", existingID)
+	}
 
 	r, err := c.InsertOne(ctx, entity)
 	if err != nil {
 		return "", fmt.Errorf("error inserting document into %v: %s", collection, err)
 	}
 
-	if oid, ok := r.InsertedID.(primitive.ObjectID); ok {
-		return oid.Hex(), nil
-	} else {
-		return "", fmt.Errorf("error getting id string from %v", r.InsertedID)
-	}
+	id := (r.InsertedID).(string)
+
+	return id, nil
 }
 
-func (s *MongoStore) FindOne(collection string, filter map[string]interface{}, dest interface{}) (bool, error) {
+func (s *MongoStore) FindOne(collection string, filter map[string]interface{}, dest interface{}) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -96,11 +100,11 @@ func (s *MongoStore) FindOne(collection string, filter map[string]interface{}, d
 		idString, ok := id.(string)
 		err := fmt.Errorf("invalid _id paramenter value: %v", idString)
 		if !ok {
-			return false, err
+			return err
 		}
 		objID, err := primitive.ObjectIDFromHex(idString)
 		if err != nil {
-			return false, err
+			return err
 		}
 		filter["_id"] = objID
 	}
@@ -108,15 +112,15 @@ func (s *MongoStore) FindOne(collection string, filter map[string]interface{}, d
 	f, err := ToBson(filter)
 	if err != nil {
 		fmt.Printf("error converting %v filter to bson: %v", filter, err)
-		return false, err
+		return err
 	}
 
 	err = c.FindOne(ctx, *f).Decode(dest)
 	if err != nil && err == mongo.ErrNoDocuments {
-		return false, err
+		return nil
 	} else if err != nil {
 		fmt.Printf("FindOne error: %v", err)
-		return false, err
+		return err
 	}
-	return true, nil
+	return nil
 }

@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
-	"tradingchat/pkg/service"
+	"tradingchat/pkg/model"
 
 	"github.com/gorilla/websocket"
 )
@@ -19,7 +19,7 @@ var Upgrader = websocket.Upgrader{
 	CheckOrigin:     func(r *http.Request) bool { return true },
 }
 
-func HandleConnection(conn *websocket.Conn, bg *BroadcastGroup, user *service.User) {
+func HandleConnection(conn *websocket.Conn, bg *BroadcastGroup, user *model.User) {
 	client := Client{
 		IncomingMessages: make(chan []byte),
 		User:             *user,
@@ -65,7 +65,8 @@ func handleClientMessage(conn *websocket.Conn, bg *BroadcastGroup, client *Clien
 					fmt.Printf("error marshalling message to be sent: %v", err)
 					return
 				}
-				write(byteMsg, conn)
+				client.IncomingMessages <- byteMsg
+
 			}
 
 		}

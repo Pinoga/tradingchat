@@ -15,6 +15,10 @@ func SendCommandToBot(c string, bg int) error {
 		ID: fmt.Sprint(bg),
 	})
 
+	if c == "" {
+		return fmt.Errorf("please input a valid command")
+	}
+
 	resp, err := http.Post("http://127.0.0.1:9000/api/stocks/"+c, "application/json", bytes.NewBuffer(postBody))
 	if err != nil {
 		return fmt.Errorf("unexpected error")
@@ -29,14 +33,5 @@ func SendCommandToBot(c string, bg int) error {
 		return fmt.Errorf(string(body))
 	}
 
-	// err = json.Unmarshal(body, &respUnmarshalled)
-	// if err != nil {
-	// 	fmt.Println("json")
-	// 	return fmt.Errorf("unexpected error")
-	// }
-	// if respUnmarshalled.Error {
-	// 	fmt.Println("resp")
-	// 	return fmt.Errorf(respUnmarshalled.Message)
-	// }
 	return nil
 }

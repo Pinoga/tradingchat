@@ -3,7 +3,8 @@ package app
 import (
 	"fmt"
 	"net/http"
-	"tradingchat/pkg/service"
+	"tradingchat/pkg/model"
+	"tradingchat/pkg/util"
 
 	"github.com/gorilla/sessions"
 )
@@ -20,22 +21,9 @@ func (app *App) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// if user != u || password != p {
-	// 	http.Error(w, "user or password invalid", http.StatusForbidden)
-	// }
-
-	foundUser, err := app.UserService.FindByName(user)
-	if err != nil {
-		http.Error(w, "error finding user", http.StatusInternalServerError)
-		return
-	}
-	if foundUser == nil {
-		http.Error(w, "user or password invalid", http.StatusUnauthorized)
-		return
-	}
-
-	if passwordsMatch := service.ComparePasswords(foundUser.Hash, []byte(password)); !passwordsMatch {
-		http.Error(w, "invalid password", http.StatusUnauthorized)
+	foundUser, err := app.UserService.FindByUsername(user)
+	if err != nil || !util.ComparePasswords(foundUser.Hash, []byte(password)) {
+		http.Error(w, "invalid credentials", http.StatusUnauthorized)
 		return
 	}
 
@@ -56,7 +44,7 @@ func (app *App) handleRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	found, _ := app.UserService.FindByName(user)
+	found, _ := app.UserService.FindByUsername(user)
 	if found != nil {
 		http.Error(w, "user already registered", http.StatusOK)
 		return
@@ -118,7 +106,7 @@ func (app *App) isAuth(session *sessions.Session) bool {
 	return true
 }
 
-func (app *App) GetUserFromSession(session *sessions.Session) (*service.User, error) {
+func (app *App) GetUserFromSession(session *sessions.Session) (*model.User, error) {
 	uID, ok := session.Values["user"].(string)
 	if !ok {
 		return nil, fmt.Errorf("user not found in session")

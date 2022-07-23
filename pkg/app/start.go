@@ -2,12 +2,15 @@ package app
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"tradingchat/pkg/chat"
 	"tradingchat/pkg/mongodb"
+	"tradingchat/pkg/repo"
 	"tradingchat/pkg/service"
 	"tradingchat/pkg/store"
 
+	"github.com/go-redis/redis/v8"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
 	"github.com/streadway/amqp"
@@ -20,15 +23,19 @@ type AppConfig struct {
 	DatabaseURI     string
 	DatabaseName    string
 	RabbitMQURI     string
+	RedisHost       string
+	RedisPort       string
 }
 
 type App struct {
 	Router             *mux.Router
 	Bgs                []*chat.BroadcastGroup
-	SessionStore       *sessions.CookieStore
-	UserService        service.UserService
 	Store              store.Store
+	SessionStore       *sessions.CookieStore
+	RedisStore         *redis.Client
+	UserService        service.UserService
 	RabbitMQConnection *amqp.Connection
+
 	AppConfig
 }
 
@@ -55,7 +62,7 @@ func (app *App) Initialize(c AppConfig) *App {
 
 	app.Router = mux.NewRouter()
 
-	apiRouter := app.Router.PathPrefix("/api").Subrouter()
+	apiRouter := app.Router.PathPrefix("/v1").Subrouter()
 	apiRouter.Use(app.loggingMiddleware)
 
 	apiRouter.HandleFunc("/login", app.handleLogin).Methods("POST")
@@ -64,42 +71,46 @@ func (app *App) Initialize(c AppConfig) *App {
 
 	chatRouter := apiRouter.PathPrefix("/chat").Subrouter()
 	chatRouter.Use(app.authenticationMiddleware)
-
-	chatRouter.HandleFunc("/enter/{room}", app.handleEnterRoom).Methods("GET")
+	chatRouter.HandleFunc("/{room}/enter", app.handleEnterRoom).Methods("POST")
 
 	app.Router.PathPrefix("/").Handler(http.FileServer(http.Dir("./static")))
-	return app
-}
+	http.Handle("/", app.Router)
 
-func (app *App) Run() error {
+	app.RedisStore = redis.NewClient(&redis.Options{
+		Addr:     c.RedisHost,
+		Password: "",
+		DB:       0,
+	})
+
 	store, err := mongodb.NewStore(mongodb.MongoOptions{
 		DB:  app.DatabaseName,
 		URI: app.DatabaseURI,
 	})
 	if err != nil {
-		return err
+		panic("could not connect to MongoDB")
 	}
 	fmt.Println("Connected to MongoDB successfully")
 
 	app.Store = store
-	app.UserService = service.NewUserService(store)
+	userRepository := repo.NewUserRepository("user", store)
+	app.UserService = service.NewUserService(userRepository)
 
 	rabbitMQConnection, err := amqp.Dial(app.RabbitMQURI)
 	if err != nil {
-		return err
+		panic("could not connect to RabbitMQ")
 	}
 	fmt.Println("Connected to RabbitMQ successfully")
 
 	app.RabbitMQConnection = rabbitMQConnection
 	ch, err := rabbitMQConnection.Channel()
 	if err != nil {
-		return err
+		panic("could not create RabbitMQ channel")
 	}
 	defer ch.Close()
 
 	msgs, err := app.ConsumeQueueMessages(ch)
 	if err != nil {
-		return err
+		panic("could not connect to RabbitMQ queue")
 	}
 	go app.HandleConsumedMessages(msgs)
 
@@ -107,11 +118,10 @@ func (app *App) Run() error {
 		go bg.HandleBroadcasts()
 	}
 
-	http.Handle("/", app.Router)
+	log.Fatal(http.ListenAndServe(":"+app.AppConfig.Port, app.Router))
 	fmt.Printf("Listening on %s\n", app.AppConfig.Port)
 
-	err = http.ListenAndServe(":"+app.AppConfig.Port, nil)
-	return err
+	return app
 }
 
 func (app *App) Stop() {

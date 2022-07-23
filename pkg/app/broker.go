@@ -19,7 +19,7 @@ func (app *App) HandleConsumedMessages(msgs <-chan amqp.Delivery) {
 		fmt.Printf("got message: %s\n", msg.Body)
 		var msgStruct struct {
 			Message  string `json:"message"`
-			Error    bool   `json:"error"`
+			Error    bool   `json:"hasErr"`
 			CallerID string `json:"caller_id"`
 		}
 		err := json.Unmarshal(msg.Body, &msgStruct)
@@ -27,14 +27,16 @@ func (app *App) HandleConsumedMessages(msgs <-chan amqp.Delivery) {
 			continue
 		}
 		bgIndex, err := strconv.Atoi(msgStruct.CallerID)
-		if err != nil {
+		if err != nil || bgIndex >= len(app.Bgs) || bgIndex < 0 {
+			fmt.Printf("invalid broadcast group: %s\n", msgStruct.CallerID)
 			continue
 		}
 
 		msgChat := chat.Message{
-			User:      "bot",
+			User:      "stock_bot",
 			Role:      "bot",
 			Content:   msgStruct.Message,
+			Error:     msgStruct.Error,
 			Timestamp: time.Now().Format("15:04:05"),
 		}
 

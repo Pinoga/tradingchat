@@ -1,7 +1,9 @@
 package store
 
+import "tradingchat/pkg/mongodb"
+
 type Store interface {
-	InsertOne(string, interface{}) (string, error)
-	FindOne(string, map[string]interface{}, interface{}) (bool, error)
+	InsertOne(string, mongodb.MongoEntity) (string, error)
+	FindOne(string, map[string]interface{}, interface{}) error
 	Disconnect()
 }

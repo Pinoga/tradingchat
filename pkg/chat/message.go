@@ -4,6 +4,7 @@ type Message struct {
 	User      string `json:"user"`
 	Content   string `json:"content"`
 	Role      string `json:"role"`
+	Error     bool   `json:"error"`
 	Timestamp string `json:"timestamp"`
 }
 

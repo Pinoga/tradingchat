@@ -19,12 +19,9 @@ func main() {
 		DatabaseURI:     os.Getenv("DB_URI"),
 		DatabaseName:    os.Getenv("DB_NAME"),
 		RabbitMQURI:     os.Getenv("RABBITMQ_URI"),
+		RedisHost:       os.Getenv("REDIS_HOST"),
 	}
 	application := app.NewApp()
-	application.Initialize(config)
-	err = application.Run()
 	defer application.Stop()
-	if err != nil {
-		log.Fatalf(err.Error())
-	}
+	application.Initialize(config)
 }

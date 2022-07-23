@@ -1,66 +1,58 @@
 package service
 
 import (
-	"tradingchat/pkg/store"
+	"tradingchat/pkg/model"
+	"tradingchat/pkg/repo"
+	"tradingchat/pkg/util"
 )
 
 type UserService interface {
-	FindByID(string) (*User, error)
 	Register(username, password string) (string, error)
-	FindByName(string) (*User, error)
+	FindByUsername(string) (*model.User, error)
+	FindByID(string) (*model.User, error)
 }
 
 type userService struct {
-	Store store.Store
+	Repository repo.UserRepository
 }
 
-type User struct {
-	ID       string `json:"id" bson:"_id,omitempty"`
-	Username string `json:"username" bson:"username"`
-	Role     string `json:"role" bson:"role"`
-	Hash     string `json:"hash" bson:"hash"`
-}
-
-func NewUserService(store store.Store) UserService {
+func NewUserService(repo repo.UserRepository) UserService {
 	return &userService{
-		Store: store,
+		Repository: repo,
 	}
-}
-
-func (us *userService) FindByID(id string) (*User, error) {
-	var user User
-
-	found, err := us.Store.FindOne("user", map[string]interface{}{"_id": id}, &user)
-	if !found {
-		return nil, err
-	}
-	return &user, err
 }
 
 func (us *userService) Register(username, password string) (string, error) {
-	hash, err := HashSaltPassword([]byte(password))
+	hash, err := util.HashSaltPassword([]byte(password))
 	if err != nil {
 		return "", err
 	}
 
-	user := User{
+	user := model.User{
 		Username: username,
 		Role:     "user",
 		Hash:     hash,
 	}
 
-	id, err := us.Store.InsertOne("user", &user)
+	id, err := us.Repository.Insert(&user)
 	if err != nil {
 		return "", err
 	}
 	return id, err
 }
 
-func (us *userService) FindByName(username string) (*User, error) {
-	var user User
-	found, err := us.Store.FindOne("user", map[string]interface{}{"username": username}, &user)
-	if !found {
+func (us *userService) FindByUsername(username string) (*model.User, error) {
+	user, err := us.Repository.FindByUsername(username)
+	if err != nil {
 		return nil, err
 	}
-	return &user, err
+	return user, err
+}
+
+func (us *userService) FindByID(id string) (*model.User, error) {
+	user, err := us.Repository.FindByID(id)
+	if err != nil {
+		return nil, err
+	}
+	return user, err
 }

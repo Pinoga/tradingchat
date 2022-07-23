@@ -1,14 +1,13 @@
 package chat
 
 import (
-	"fmt"
-	"tradingchat/pkg/service"
+	"tradingchat/pkg/model"
 )
 
 // Channel containing messages from
 type Client struct {
 	IncomingMessages chan []byte
-	User             service.User
+	User             model.User
 }
 
 type BroadcastGroup struct {
@@ -39,7 +38,6 @@ func (bg *BroadcastGroup) Get(m []byte) {
 
 func (bg *BroadcastGroup) Enter(c *Client) {
 	bg.entering <- c
-	fmt.Println("entered?")
 }
 
 func (bg *BroadcastGroup) Leave(c *Client) {

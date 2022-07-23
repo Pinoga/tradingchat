@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strconv"
 	"tradingchat/pkg/chat"
-	"tradingchat/pkg/service"
+	"tradingchat/pkg/model"
 
 	"github.com/gorilla/mux"
 )
@@ -32,7 +32,7 @@ func (app *App) handleEnterRoom(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user := r.Context().Value(UserContextKey("user")).(service.User)
+	user := r.Context().Value(UserContextKey("user")).(model.User)
 
 	chat.HandleConnection(conn, app.Bgs[room], &user)
 }

@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -56,6 +57,7 @@ func main() {
 	router := mux.NewRouter()
 
 	router.HandleFunc("/api/stocks/{stock_code}", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Println("got request ", r.Body)
 		var body StockRequest
 
 		err := json.NewDecoder(r.Body).Decode(&body)
@@ -80,13 +82,9 @@ func main() {
 		fmt.Println("sending process request...", reqProcess)
 		Requests <- reqProcess
 
-		w.Header().Set("Content-Type", "application/json")
 		w.Write([]byte("{}"))
 	}).Methods("POST")
 
 	http.Handle("/", router)
-	err = http.ListenAndServe(":9000", nil)
-	if err != nil {
-		panic(err)
-	}
+	log.Fatal(http.ListenAndServe(":9999", router))
 }
