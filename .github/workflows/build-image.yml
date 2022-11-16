@@ -33,7 +33,7 @@ jobs:
         - name: Build Docker image
           run: |
             chmod +x deploy/build-image.sh
-            ./deploy/build-image.sh us-east-1 $ACCOUNT $REPOSITORY $PROJECT ${{ env.GITHUB_SHA }} $BUILD_VERSION
+            ./deploy/build-image.sh us-east-1 $ACCOUNT $REPOSITORY $PROJECT $GITHUB_SHA $BUILD_VERSION
           
           
 
