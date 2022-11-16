@@ -19,7 +19,7 @@ TAG="$PROJECT":"$HASH"-"$BUILD"
 
 ls -las
 
-docker build -t "$TAG" "$PROJECT"/Dockerfile
+docker build -t "$TAG" -f deploy/"$PROJECT"/Dockerfile .
 
 docker push "$REPO_URL"/"$TAG"
 
