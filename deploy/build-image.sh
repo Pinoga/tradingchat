@@ -15,7 +15,7 @@ aws ecr get-login-password --region "$REGION" \
   --password-stdin \
   "$REPO_URL"
 
-TAG="$PROJECT":"$HASH":"$BUILD"
+TAG="$PROJECT":"$HASH"-"$BUILD"
 
 docker build -t "$TAG" "$PROJECT"/Dockerfile
 
