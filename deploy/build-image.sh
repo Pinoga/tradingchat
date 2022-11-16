@@ -21,5 +21,5 @@ ls -las
 
 docker build -t "$TAG" -f deploy/"$PROJECT"/Dockerfile .
 
-docker push "$REPO_URL"/"$TAG"
+docker push "$TAG"
 
