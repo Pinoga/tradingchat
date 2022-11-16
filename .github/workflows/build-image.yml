@@ -1,0 +1,39 @@
+name: Build Docker Image
+on:
+  workflow_dispatch
+permissions:
+  id-token: write   # This is required for requesting the JWT
+  contents: read    # This is required for actions/checkout
+
+jobs:
+  build-image:
+    name: Build image
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      ACCOUNT: ${{ secrets.AWS_ACCOUNT }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      PROJECT: chat
+      REPOSITORY: services
+      BUILD_VERSION: 0.0.1
+    steps:
+        - uses: actions/checkout@v3
+        - uses: actions/setup-go@v3
+          with:
+            go-version: '1.18.0'
+        - name: Configure AWS credentials
+          uses: aws-actions/configure-aws-credentials@v1-node16
+          with:
+            role-to-assume: arn:aws:iam::273019133067:role/github-oidc-role
+            aws-region: us-east-1
+        - name: Test Application
+          run: |
+            go build -v ./... && go test -v ./...
+        - name: Build Docker image
+          run: |
+            chmod +x deploy/build-image.sh
+            ./deploy/build-image.sh us-east-1 $ACCOUNT $REPOSITORY $PROJECT ${{ env.GITHUB_SHA }} $BUILD_VERSION
+          
+          
+

@@ -23,6 +23,6 @@ function handleAuth(form, res) {
   }
 }
 
-const loginUrl = "http://localhost:8080/api/login";
-const registerUrl = "http://localhost:8080/api/register";
+const loginUrl = "http://localhost:8080/v1/login";
+const registerUrl = "http://localhost:8080/v1/register";
 const sendMessageUrl = "";

@@ -1,0 +1,6 @@
+/vendor
+.gitignore
+README.md
+/.vscode
+/.idea
+/deploy
