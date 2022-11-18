@@ -26,11 +26,12 @@ jobs:
     name: Build Docker Image
     env:
       BUILD_BRANCH: main
-      with:
-        PROJECT: chat
-        SCOPE: services
-        BUILD_VERSION: 0.0.1
-        BRANCH: $BUILD_BRANCH
+    uses: Pinoga/tradingbuild/.github/workflows/build-image.yml@${BUILD_BRANCH}
+    with:
+      PROJECT: chat
+      SCOPE: services
+      BUILD_VERSION: 0.0.1
+      BRANCH: $BUILD_BRANCH
 
           
 
