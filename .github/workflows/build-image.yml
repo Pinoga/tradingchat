@@ -10,13 +10,10 @@ jobs:
     name: Build image
     runs-on: ubuntu-latest
     env:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       ACCOUNT: ${{ secrets.AWS_ACCOUNT }}
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      PROJECT: chat
-      SCOPE: services
-      BUILD_VERSION: 0.0.1
+      BUILD_BRANCH: main
     steps:
         - uses: actions/checkout@v3
         - uses: actions/setup-go@v3
@@ -31,9 +28,13 @@ jobs:
           run: |
             go build -v ./... && go test -v ./...
         - name: Build Docker image
-          run: |
-            chmod +x deploy/build-image.sh
-            ./deploy/build-image.sh us-east-1 $ACCOUNT $SCOPE $PROJECT $GITHUB_SHA $BUILD_VERSION
+          uses: Pinoga/tradingbuild/.github/workflows/build-image.yml@${BUILD_BRANCH}
+          with:
+            PROJECT: chat
+            SCOPE: services
+            BUILD_VERSION: 0.0.1
+            BRANCH: $BUILD_BRANCH
+
           
           
 
