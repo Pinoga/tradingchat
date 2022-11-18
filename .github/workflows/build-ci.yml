@@ -24,14 +24,12 @@ jobs:
             go build -v ./... && go test -v ./...
   build-image:
     name: Build Docker Image
-    env:
-      BUILD_BRANCH: main
     uses: Pinoga/tradingbuild/.github/workflows/build-image.yml@main
     with:
       PROJECT: chat
       SCOPE: services
       BUILD_VERSION: 0.0.1
-      BRANCH: $BUILD_BRANCH
+      BRANCH: main
 
           
 
