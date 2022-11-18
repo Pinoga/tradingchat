@@ -2,22 +2,26 @@
 
 REGION=$1
 ACCOUNT=$2
-REPOSITORY=$3
+SCOPE=$3
 PROJECT=$4
 HASH=$5
 BUILD=$6
 
-REPO_URL="$ACCOUNT.dkr.ecr.$REGION.amazonaws.com/$REPOSITORY"
+REGISTRY="$ACCOUNT.dkr.ecr.$REGION.amazonaws.com"
+REPOSITORY="$SCOPE"/"$PROJECT"
+REPOSITORY_URL="$REGISTRY"/"$REPOSITORY"
 
 aws ecr get-login-password --region "$REGION" \
 | docker login \
   -u AWS \
   --password-stdin \
-  "$REPO_URL"
+  "$REGISTRY"
 
-TAG="$PROJECT":"$HASH"-"$BUILD"
+TAG="$HASH"-"$BUILD"
 
-docker build -t "$TAG" "$PROJECT"/Dockerfile
+ls -las
 
-docker push "$TAG"
+docker build -t "$REPOSITORY_URL":"$TAG" -f deploy/"$PROJECT"/Dockerfile .
+
+docker push "$REPOSITORY_URL":"$TAG"
 
