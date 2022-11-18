@@ -29,7 +29,7 @@ jobs:
       PROJECT: chat
       SCOPE: services
       BUILD_VERSION: 0.0.1
-      BRANCH: main
+      BUILD_BRANCH: main
 
           
 
