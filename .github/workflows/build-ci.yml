@@ -6,7 +6,7 @@ permissions:
   contents: read    # This is required for actions/checkout
 
 jobs:
-  checkout-test:
+  test:
     name: Test Application
     runs-on: ubuntu-latest
     steps:
@@ -22,9 +22,10 @@ jobs:
         - name: Test Application
           run: |
             go build -v ./... && go test -v ./...
-  build-image:
+  build:
     name: Build Docker Image
     uses: Pinoga/tradingbuild/.github/workflows/build-image.yml@main
+    needs: test
     with:
       PROJECT: chat
       SCOPE: services
